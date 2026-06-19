@@ -20,13 +20,50 @@ class FarmerCreate(BaseModel):
     phone: str = Field(min_length=7, max_length=20)
     national_id: str | None = Field(default=None, max_length=20)
 
-    @field_validator("phone")
+    @field_validator("first_name", "last_name", mode="before")
+    @classmethod
+    def required_text_not_blank(cls, v: str) -> str:
+        if not isinstance(v, str):
+            return v
+
+        value = v.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+    @field_validator("phone", mode="before")
     @classmethod
     def phone_digits_only(cls, v: str) -> str:
-        stripped = v.lstrip("+")
-        if not stripped.isdigit():
+        if not isinstance(v, str):
+            return v
+
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("phone must not be blank")
+
+        normalized = stripped.lstrip("+")
+        if not normalized.isdigit():
             raise ValueError("phone must contain only digits (and an optional leading +)")
-        return v
+        if set(normalized) == {"0"}:
+            raise ValueError("phone cannot be all zeros")
+        return stripped
+
+    @field_validator("national_id", mode="before")
+    @classmethod
+    def national_id_digits_only(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if not isinstance(v, str):
+            return v
+
+        value = v.strip()
+        if not value:
+            raise ValueError("national_id must not be blank")
+        if not value.isdigit():
+            raise ValueError("national_id must contain only digits")
+        if set(value) == {"0"}:
+            raise ValueError("national_id cannot be all zeros")
+        return value
 
 
 class FarmerRead(BaseModel):

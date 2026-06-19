@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.models.farmer import Farmer
+from db.models.sacco import Sacco
 from repository.farmer_repository import FarmerRepository
 from schemas.farmer import FarmerCreate, FarmerRead, FarmerProfile
 from schemas.farm import FarmRead
@@ -28,6 +30,9 @@ class FarmerService:
         Validate uniqueness then persist.
         Raises DuplicateError if phone or national_id already exists.
         """
+        if self.db.get(Sacco, data.sacco_id) is None:
+            raise NotFoundError(f"Sacco '{data.sacco_id}' not found.")
+
         if self.repo.get_farmer_by_phone(data.phone):
             raise DuplicateError(f"A farmer with phone '{data.phone}' is already registered.")
 
@@ -45,7 +50,13 @@ class FarmerService:
             national_id=data.national_id,
         )
         self.repo.create_farmer(farmer)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise DuplicateError(
+                "A farmer with that phone or national ID already exists."
+            ) from exc
         self.db.refresh(farmer)
         return FarmerRead.model_validate(farmer)
 

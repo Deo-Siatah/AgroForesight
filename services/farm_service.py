@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.models.farm import Farm
 from repository.farm_repository import FarmRepository
 from repository.farmer_repository import FarmerRepository
 from schemas.farm import FarmCreate, FarmRead
-from services.exceptions import NotFoundError
+from services.exceptions import BusinessRuleError, NotFoundError
 
 
 class FarmService:
@@ -42,7 +43,11 @@ class FarmService:
             longitude=data.longitude,
         )
         self.repo.create_farm(farm)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise BusinessRuleError("Unable to create farm due to conflicting data.") from exc
         self.db.refresh(farm)
         return FarmRead.model_validate(farm)
 

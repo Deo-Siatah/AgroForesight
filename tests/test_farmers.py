@@ -52,6 +52,18 @@ class TestRegisterFarmer:
         r = client.post(BASE, json=_payload(sacco_id, phone="not-a-phone"))
         assert r.status_code == 422
 
+    def test_zero_only_phone_returns_422(self, client, sacco_id):
+        r = client.post(BASE, json=_payload(sacco_id, phone="000000000"))
+        assert r.status_code == 422
+
+    def test_zero_only_national_id_returns_422(self, client, sacco_id):
+        r = client.post(BASE, json=_payload(sacco_id, national_id="000000000"))
+        assert r.status_code == 422
+
+    def test_whitespace_only_name_returns_422(self, client, sacco_id):
+        r = client.post(BASE, json=_payload(sacco_id, first_name="   "))
+        assert r.status_code == 422
+
     def test_empty_first_name_returns_422(self, client, sacco_id):
         r = client.post(BASE, json=_payload(sacco_id, first_name=""))
         assert r.status_code == 422

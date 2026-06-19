@@ -5,13 +5,16 @@ Uses the real Neon DB — tests create data with random IDs and clean up after.
 """
 import uuid
 import random
+import os
 import pytest
-from fastapi.testclient import TestClient
+import httpx
 from sqlalchemy import text
 
-from main import app
 from db.session import SessionLocal
 from db.models.sacco import Sacco
+
+
+BASE_API_URL = os.getenv("AGROFORESIGHT_API_BASE_URL", "http://127.0.0.1:8000")
 
 
 def rnd_phone() -> str:
@@ -28,7 +31,7 @@ def rnd_nid() -> str:
 
 @pytest.fixture(scope="session")
 def client():
-    with TestClient(app) as c:
+    with httpx.Client(base_url=BASE_API_URL, timeout=30.0) as c:
         yield c
 
 

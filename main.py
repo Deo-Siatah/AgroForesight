@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 from api.v1 import router as v1_router
 from services.exceptions import (
@@ -47,6 +48,14 @@ async def invalid_transition_handler(request: Request, exc: InvalidTransitionErr
 @app.exception_handler(BusinessRuleError)
 async def business_rule_handler(request: Request, exc: BusinessRuleError) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "The request conflicts with existing data or database constraints."},
+    )
 
 
 # ---------------------------------------------------------------------------

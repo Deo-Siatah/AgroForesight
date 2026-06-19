@@ -15,13 +15,14 @@ from __future__ import annotations
 import uuid
 from typing import Set
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.models.loan import Loan, LoanStatusEnum
 from repository.loan_repository import LoanRepository
 from repository.farmer_repository import FarmerRepository
 from schemas.loan import LoanCreate, LoanRead
-from services.exceptions import InvalidTransitionError, NotFoundError
+from services.exceptions import BusinessRuleError, InvalidTransitionError, NotFoundError
 
 
 # Transition table — the single source of truth for loan status rules.
@@ -65,7 +66,11 @@ class LoanService:
             risk_score=None,
         )
         self.repo.create_loan(loan)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise BusinessRuleError("Unable to create loan due to conflicting data.") from exc
         self.db.refresh(loan)
         return LoanRead.model_validate(loan)
 

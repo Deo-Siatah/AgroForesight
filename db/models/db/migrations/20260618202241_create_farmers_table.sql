@@ -6,6 +6,8 @@ CREATE TABLE farmers (
     last_name TEXT,
     phone TEXT,
     national_id TEXT,
+    CONSTRAINT uq_farmers_phone UNIQUE (phone),
+    CONSTRAINT uq_farmers_national_id UNIQUE (national_id),
     created_at TIMESTAMP DEFAULT NOW()
 );
 

@@ -15,13 +15,14 @@ from __future__ import annotations
 import uuid
 from typing import Set
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.models.season import Season, SeasonStatusEnum
 from repository.season_repository import SeasonRepository
 from repository.farm_repository import FarmRepository
 from schemas.season import SeasonCreate, SeasonRead
-from services.exceptions import InvalidTransitionError, NotFoundError
+from services.exceptions import BusinessRuleError, InvalidTransitionError, NotFoundError
 
 
 # Allowed (from → {valid targets}) — extend here as business rules evolve.
@@ -61,7 +62,11 @@ class SeasonService:
             status=SeasonStatusEnum.planned,
         )
         self.repo.create_season(season)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise BusinessRuleError("Unable to create season due to conflicting data.") from exc
         self.db.refresh(season)
         return SeasonRead.model_validate(season)
 
