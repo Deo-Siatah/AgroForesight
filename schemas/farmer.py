@@ -1,4 +1,6 @@
 """
+schemas/farmer.py — Farmer schemas + FarmerProfile composite response.
+
 schemas/farmer.py
 Input and output schemas for the Farmer entity.
 Validation lives here — repositories and ORM models stay dumb.
@@ -37,3 +39,16 @@ class FarmerRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# Imported here to avoid a circular import between farmer ↔ farm/loan schemas.
+# FarmerProfile is the canonical shape for get_farmer_profile(); it feeds the
+# dashboard, WhatsApp agent, and USSD layer without future schema changes.
+from schemas.farm import FarmRead   # noqa: E402
+from schemas.loan import LoanRead   # noqa: E402
+
+
+class FarmerProfile(BaseModel):
+    farmer: FarmerRead
+    farms: list[FarmRead]
+    loans: list[LoanRead]

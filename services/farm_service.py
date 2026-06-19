@@ -1,0 +1,53 @@
+"""
+services/farm_service.py
+Business brain for the Farm entity.
+Bad farm data = bad AI later — coordinate validation is the
+highest-leverage check in Phase 1 (plan rule 8).
+"""
+from __future__ import annotations
+
+import uuid
+
+from sqlalchemy.orm import Session
+
+from db.models.farm import Farm
+from repository.farm_repository import FarmRepository
+from repository.farmer_repository import FarmerRepository
+from schemas.farm import FarmCreate, FarmRead
+from services.exceptions import NotFoundError
+
+
+class FarmService:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+        self.repo = FarmRepository(db)
+        self.farmer_repo = FarmerRepository(db)
+
+    def create_farm(self, data: FarmCreate) -> FarmRead:
+        """
+        Persist a new farm after verifying the owning farmer exists.
+        Coordinate and acreage validation is already handled by FarmCreate
+        (including the Kenya bounding-box check).
+        """
+        if self.farmer_repo.get_farmer_by_id(data.farmer_id) is None:
+            raise NotFoundError(f"Farmer '{data.farmer_id}' not found.")
+
+        farm = Farm(
+            id=uuid.uuid4(),
+            farmer_id=data.farmer_id,
+            name=data.name,
+            county=data.county,
+            acreage=data.acreage,
+            latitude=data.latitude,
+            longitude=data.longitude,
+        )
+        self.repo.create_farm(farm)
+        self.db.commit()
+        self.db.refresh(farm)
+        return FarmRead.model_validate(farm)
+
+    def get_farm(self, farm_id: uuid.UUID) -> FarmRead:
+        farm = self.repo.get_farm(farm_id)
+        if farm is None:
+            raise NotFoundError(f"Farm '{farm_id}' not found.")
+        return FarmRead.model_validate(farm)

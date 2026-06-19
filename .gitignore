@@ -2,7 +2,7 @@
 .venv/
 venv/
 .uv.lock
-.sixth/skills/
+.sixth/
 .env
 
 
