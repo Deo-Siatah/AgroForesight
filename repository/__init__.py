@@ -2,8 +2,6 @@
 repository/__init__.py
 Exports all repository classes for convenient imports.
 
-Usage:
-    from repository import FarmerRepository, FarmRepository, ...
 """
 from repository.farmer_repository import FarmerRepository
 from repository.farm_repository import FarmRepository

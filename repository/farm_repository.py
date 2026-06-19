@@ -1,5 +1,5 @@
 """
-Repository layer — Farm
+Repository layer for Farm
 Responsibility: DB access ONLY. No validation, no business logic.
 """
 from __future__ import annotations
@@ -17,26 +17,14 @@ class FarmRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    # ------------------------------------------------------------------
-    # Write
-    # ------------------------------------------------------------------
-
     def create_farm(self, farm: Farm) -> Farm:
         """Insert a new Farm row. Caller is responsible for all validation."""
         self.db.add(farm)
         self.db.flush()
         return farm
 
-    # ------------------------------------------------------------------
-    # Read — single record
-    # ------------------------------------------------------------------
-
     def get_farm(self, farm_id: uuid.UUID) -> Farm | None:
         return self.db.get(Farm, farm_id)
-
-    # ------------------------------------------------------------------
-    # Read — collections
-    # ------------------------------------------------------------------
 
     def list_farms(
         self,
