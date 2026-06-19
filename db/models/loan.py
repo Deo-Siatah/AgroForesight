@@ -1,16 +1,17 @@
 import uuid
+from enum import Enum
 
 from sqlalchemy import ForeignKey
 from sqlalchemy import String
 from sqlalchemy import Numeric
 from sqlalchemy import Integer
+from sqlalchemy.types import Enum as SaEnum
 
 from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
-from enum import Enum
 
 from db.base import Base
 from db.base import TimestampMixin
@@ -24,6 +25,7 @@ class LoanStatusEnum(str, Enum):
     repaid = "repaid"
     defaulted = "defaulted"
     rejected = "rejected"
+
 
 class Loan(Base, TimestampMixin):
     __tablename__ = "loans"
@@ -42,7 +44,7 @@ class Loan(Base, TimestampMixin):
     )
 
     status = mapped_column(
-        Enum(LoanStatusEnum, native_enum=True),
+        SaEnum(LoanStatusEnum, native_enum=True),
         nullable=False,
     )
 
