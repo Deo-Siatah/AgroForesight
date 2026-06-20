@@ -1,33 +1,34 @@
 """
 tests/conftest.py
-Shared fixtures for the full integration test suite.
-Uses the real Neon DB — tests create data with random IDs and clean up after.
+
+Session-scoped fixtures that wire the full test suite against the live server.
+
+Flow every test run follows:
+  1. admin logs in (seeded user from api.md)
+  2. admin creates a fresh SACCO via POST /api/v1/saccos  → yields sacco_id + sacco_admin token
+  3. all tests run against that SACCO
+  4. teardown: nothing to clean up on the live DB — each run uses unique random data
+
+No direct DB access. Everything goes through the API.
 """
-import uuid
+from __future__ import annotations
+
 import random
-import os
-import pytest
+import uuid
+
 import httpx
-from sqlalchemy import text
+import pytest
 
-from db.session import SessionLocal
-from db.models.sacco import Sacco
-from db.models.user import User, RoleEnum
+BASE = "http://127.0.0.1:8000"
 
-
-BASE_API_URL = os.getenv("AGROFORESIGHT_API_BASE_URL", "http://127.0.0.1:8000")
+# Seeded admin from api.md
 ADMIN_EMAIL = "admin26@gmail.com"
 ADMIN_PASSWORD = "admin26"
-SACCO_ADMIN_EMAIL = "saccoadmin26@gmail.com"
-SACCO_ADMIN_PASSWORD = "saccoadmin26"
 
 
-def login_token(email: str, password: str) -> str:
-    with httpx.Client(base_url=BASE_API_URL, timeout=30.0) as c:
-        response = c.post("/api/v1/auth/login", json={"email": email, "password": password})
-        response.raise_for_status()
-        return response.json()["access_token"]
-
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def rnd_phone() -> str:
     return f"+2547{random.randint(10_000_000, 99_999_999)}"
@@ -37,124 +38,68 @@ def rnd_nid() -> str:
     return str(random.randint(10_000_000, 99_999_999))
 
 
-def admin_auth_headers() -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {login_token(ADMIN_EMAIL, ADMIN_PASSWORD)}",
-    }
+def rnd_email() -> str:
+    return f"user-{uuid.uuid4().hex[:10]}@agroforesight.test"
 
 
-def sacco_admin_auth_headers() -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {login_token(SACCO_ADMIN_EMAIL, SACCO_ADMIN_PASSWORD)}",
-    }
+def login(email: str, password: str) -> str:
+    """Return a bearer token for the given credentials."""
+    r = httpx.post(f"{BASE}/api/v1/auth/login", json={"email": email, "password": password}, timeout=15)
+    assert r.status_code == 200, f"Login failed for {email}: {r.text}"
+    return r.json()["access_token"]
+
+
+def auth(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
 # ---------------------------------------------------------------------------
-# Client — session-scoped (one per pytest run)
+# Session fixtures
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
-def client(seed_sacco):
-    token = login_token(SACCO_ADMIN_EMAIL, SACCO_ADMIN_PASSWORD)
-    with httpx.Client(
-        base_url=BASE_API_URL,
-        timeout=30.0,
-        headers={"Authorization": f"Bearer {token}"},
-    ) as c:
+def admin_token() -> str:
+    return login(ADMIN_EMAIL, ADMIN_PASSWORD)
+
+
+@pytest.fixture(scope="session")
+def admin_client(admin_token) -> httpx.Client:
+    """Persistent httpx client authenticated as platform admin."""
+    with httpx.Client(base_url=BASE, headers=auth(admin_token), timeout=15) as c:
         yield c
 
 
-# ---------------------------------------------------------------------------
-# DB session — session-scoped
-# ---------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def sacco_data(admin_client) -> dict:
+    """
+    Create a fresh SACCO via the API (as admin).
+    Returns the full SaccoRead payload plus the raw admin credentials
+    so we can log in as the sacco_admin.
+    """
+    admin_email = rnd_email()
+    admin_password = "SaccoAdmin!99"
+    r = admin_client.post("/api/v1/saccos", json={
+        "name": f"TestSACCO-{uuid.uuid4().hex[:6]}",
+        "county": "Nakuru",
+        "admin_email": admin_email,
+        "admin_password": admin_password,
+    })
+    assert r.status_code == 201, f"SACCO creation failed: {r.text}"
+    return {**r.json(), "_admin_email": admin_email, "_admin_password": admin_password}
+
 
 @pytest.fixture(scope="session")
-def test_db():
-    session = SessionLocal()
-    yield session
-    session.close()
+def sacco_id(sacco_data) -> uuid.UUID:
+    return uuid.UUID(sacco_data["id"])
 
-
-# ---------------------------------------------------------------------------
-# Seed SACCO — session-scoped, cleaned up at the very end
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(scope="session", autouse=True)
-def seed_sacco(test_db):
-    if test_db.query(User).filter(User.email == ADMIN_EMAIL).first() is None:
-        test_db.add(User(
-            id=uuid.uuid4(),
-            email=ADMIN_EMAIL,
-            password_hash=ADMIN_PASSWORD,
-            role=RoleEnum.admin,
-        ))
-
-    if test_db.query(User).filter(User.email == SACCO_ADMIN_EMAIL).first() is None:
-        test_db.add(User(
-            id=uuid.uuid4(),
-            email=SACCO_ADMIN_EMAIL,
-            password_hash=SACCO_ADMIN_PASSWORD,
-            role=RoleEnum.sacco_admin,
-        ))
-
-    sacco = Sacco(id=uuid.uuid4(), name="AgroTest SACCO", county="Nakuru")
-    test_db.add(sacco)
-    test_db.flush()
-
-    sacco_admin = test_db.query(User).filter(User.email == SACCO_ADMIN_EMAIL).first()
-    if sacco_admin is not None:
-        sacco_admin.sacco_id = sacco.id
-
-    test_db.commit()
-
-    yield sacco
-
-    # Use a FRESH session for cleanup — the test_db connection may have been
-    # terminated by Neon's idle-in-transaction timeout after the long test run.
-    cleanup = SessionLocal()
-    try:
-        sid = str(sacco.id)
-        cleanup.execute(text(
-            "DELETE FROM loans WHERE farmer_id IN "
-            "(SELECT id FROM farmers WHERE sacco_id = :sid)"
-        ), {"sid": sid})
-            cleanup.execute(text(
-                "DELETE FROM users WHERE farmer_id IN "
-                "(SELECT id FROM farmers WHERE sacco_id = :sid)"
-            ), {"sid": sid})
-            cleanup.execute(text(
-                "DELETE FROM users WHERE sacco_id = :sid"
-            ), {"sid": sid})
-        cleanup.execute(text(
-            "DELETE FROM recommendations WHERE season_id IN ("
-            "  SELECT s.id FROM seasons s"
-            "  JOIN farms f ON s.farm_id = f.id"
-            "  JOIN farmers fa ON f.farmer_id = fa.id"
-            "  WHERE fa.sacco_id = :sid"
-            ")"
-        ), {"sid": sid})
-        cleanup.execute(text(
-            "DELETE FROM seasons WHERE farm_id IN ("
-            "  SELECT f.id FROM farms f"
-            "  JOIN farmers fa ON f.farmer_id = fa.id"
-            "  WHERE fa.sacco_id = :sid"
-            ")"
-        ), {"sid": sid})
-        cleanup.execute(text(
-            "DELETE FROM farms WHERE farmer_id IN "
-            "(SELECT id FROM farmers WHERE sacco_id = :sid)"
-        ), {"sid": sid})
-        cleanup.execute(text("DELETE FROM farmers WHERE sacco_id = :sid"), {"sid": sid})
-        cleanup.execute(text("DELETE FROM saccos WHERE id = :sid"), {"sid": sid})
-        cleanup.commit()
-    finally:
-        cleanup.close()
-
-
-# ---------------------------------------------------------------------------
-# Convenience: expose the sacco UUID for tests
-# ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
-def sacco_id(seed_sacco) -> uuid.UUID:
-    return seed_sacco.id
+def sacco_admin_token(sacco_data) -> str:
+    return login(sacco_data["_admin_email"], sacco_data["_admin_password"])
+
+
+@pytest.fixture(scope="session")
+def sacco_client(sacco_admin_token) -> httpx.Client:
+    """Persistent httpx client authenticated as the session SACCO admin."""
+    with httpx.Client(base_url=BASE, headers=auth(sacco_admin_token), timeout=15) as c:
+        yield c

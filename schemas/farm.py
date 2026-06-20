@@ -21,6 +21,13 @@ class FarmCreate(BaseModel):
     latitude: float = Field(ge=-90.0, le=90.0)
     longitude: float = Field(ge=-180.0, le=180.0)
 
+    @field_validator("name", "county", mode="before")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        if isinstance(v, str) and not v.strip():
+            raise ValueError("must not be blank")
+        return v
+
     @model_validator(mode="after")
     def coordinates_are_kenya(self) -> "FarmCreate":
         """
