@@ -10,24 +10,21 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from api.deps import get_current_user, get_db
-from api.deps import require_role
-from db.models.user import RoleEnum
+from api.deps import get_db, require_role
+from db.models.user import RoleEnum, User
 from schemas.farm import FarmCreate, FarmRead
 from services.farm_service import FarmService
 
-router = APIRouter(
-    prefix="/farms",
-    tags=["Farms"],
-    dependencies=[Depends(require_role(RoleEnum.admin, RoleEnum.sacco_admin))],
-)
+_guard = require_role(RoleEnum.admin, RoleEnum.sacco_admin)
+
+router = APIRouter(prefix="/farms", tags=["Farms"])
 
 
 @router.post("", response_model=FarmRead, status_code=201)
 def create_farm(
     data: FarmCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(_guard),
 ) -> FarmRead:
     return FarmService(db).create_farm(data, current_user)
 
@@ -36,6 +33,6 @@ def create_farm(
 def get_farm(
     farm_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(_guard),
 ) -> FarmRead:
     return FarmService(db).get_farm(farm_id, current_user)

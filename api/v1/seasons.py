@@ -16,24 +16,21 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from api.deps import get_current_user, get_db
-from api.deps import require_role
-from db.models.user import RoleEnum
+from api.deps import get_db, require_role
+from db.models.user import RoleEnum, User
 from schemas.season import SeasonCreate, SeasonRead
 from services.season_service import SeasonService
 
-router = APIRouter(
-    prefix="/seasons",
-    tags=["Seasons"],
-    dependencies=[Depends(require_role(RoleEnum.admin, RoleEnum.sacco_admin))],
-)
+_guard = require_role(RoleEnum.admin, RoleEnum.sacco_admin)
+
+router = APIRouter(prefix="/seasons", tags=["Seasons"])
 
 
 @router.post("", response_model=SeasonRead, status_code=201)
 def create_season(
     data: SeasonCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(_guard),
 ) -> SeasonRead:
     return SeasonService(db).create_season(data, current_user)
 
@@ -42,7 +39,7 @@ def create_season(
 def get_season(
     season_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(_guard),
 ) -> SeasonRead:
     return SeasonService(db).get_season(season_id, current_user)
 
@@ -51,7 +48,7 @@ def get_season(
 def activate_season(
     season_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(_guard),
 ) -> SeasonRead:
     return SeasonService(db).activate_season(season_id, current_user)
 
@@ -60,7 +57,7 @@ def activate_season(
 def harvest_season(
     season_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(_guard),
 ) -> SeasonRead:
     return SeasonService(db).harvest_season(season_id, current_user)
 
@@ -69,6 +66,6 @@ def harvest_season(
 def fail_season(
     season_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(_guard),
 ) -> SeasonRead:
     return SeasonService(db).fail_season(season_id, current_user)

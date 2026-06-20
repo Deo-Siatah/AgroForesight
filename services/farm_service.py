@@ -61,7 +61,10 @@ class FarmService:
         if farm is None:
             raise NotFoundError(f"Farm '{farm_id}' not found.")
 
-        if current_user.role != RoleEnum.admin and current_user.sacco_id != farm.farmer.sacco_id:
+        if current_user.role == RoleEnum.farmer:
+            if current_user.farmer_id != farm.farmer_id:
+                raise ForbiddenError("You can only view your own farms.")
+        elif current_user.role != RoleEnum.admin and current_user.sacco_id != farm.farmer.sacco_id:
             raise ForbiddenError("You can only view farms in your own SACCO.")
 
         return FarmRead.model_validate(farm)

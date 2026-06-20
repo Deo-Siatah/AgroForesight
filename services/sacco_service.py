@@ -14,7 +14,7 @@ from db.models.user import RoleEnum, User
 from repository.sacco_repository import SaccoRepository
 from repository.user_repository import UserRepository
 from schemas.sacco import SaccoCreate, SaccoRead
-from services.exceptions import BusinessRuleError, ConflictError, NotFoundError
+from services.exceptions import BusinessRuleError, ConflictError, ForbiddenError, NotFoundError
 from services.security import hash_password
 
 
@@ -24,7 +24,9 @@ class SaccoService:
         self.repo = SaccoRepository(db)
         self.user_repo = UserRepository(db)
 
-    def create_sacco(self, data: SaccoCreate) -> SaccoRead:
+    def create_sacco(self, data: SaccoCreate, current_user: User) -> SaccoRead:
+        if current_user.role != RoleEnum.admin:
+            raise ForbiddenError("Only platform admins can create SACCOs.")
         sacco = Sacco(
             id=uuid.uuid4(),
             name=data.name,
