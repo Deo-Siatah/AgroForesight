@@ -1,0 +1,35 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Tests
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local env — injected at runtime, never baked into the image
+.env
+.env.*
+
+# uv local cache
+.uv.lock
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Docs / planning
+*.md
+.sixth/
+.marscode/
+
+# Git
+.git/
+.gitignore
