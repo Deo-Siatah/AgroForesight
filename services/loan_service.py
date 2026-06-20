@@ -19,10 +19,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.models.loan import Loan, LoanStatusEnum
+from db.models.user import RoleEnum, User
 from repository.loan_repository import LoanRepository
 from repository.farmer_repository import FarmerRepository
 from schemas.loan import LoanCreate, LoanRead
-from services.exceptions import BusinessRuleError, InvalidTransitionError, NotFoundError
+from services.exceptions import BusinessRuleError, ForbiddenError, InvalidTransitionError, NotFoundError
 
 
 # Transition table — the single source of truth for loan status rules.
@@ -48,15 +49,19 @@ class LoanService:
     # Create
     # ------------------------------------------------------------------
 
-    def create_loan(self, data: LoanCreate) -> LoanRead:
+    def create_loan(self, data: LoanCreate, current_user: User) -> LoanRead:
         """
         Persist a new loan.
         - Verifies the farmer exists.
         - Amount validation is handled by LoanCreate (> 0).
         - Loan always starts as PENDING — no caller can set status at creation.
         """
-        if self.farmer_repo.get_farmer_by_id(data.farmer_id) is None:
+        farmer = self.farmer_repo.get_farmer_by_id(data.farmer_id)
+        if farmer is None:
             raise NotFoundError(f"Farmer '{data.farmer_id}' not found.")
+
+        if current_user.role != RoleEnum.admin and current_user.sacco_id != farmer.sacco_id:
+            raise ForbiddenError("You can only create loans for your own SACCO.")
 
         loan = Loan(
             id=uuid.uuid4(),
@@ -74,48 +79,55 @@ class LoanService:
         self.db.refresh(loan)
         return LoanRead.model_validate(loan)
 
-    def get_loan(self, loan_id: uuid.UUID) -> LoanRead:
+    def get_loan(self, loan_id: uuid.UUID, current_user: User) -> LoanRead:
         loan = self.repo.get_loan(loan_id)
         if loan is None:
             raise NotFoundError(f"Loan '{loan_id}' not found.")
+
+        if current_user.role != RoleEnum.admin and current_user.sacco_id != loan.farmer.sacco_id:
+            raise ForbiddenError("You can only view loans in your own SACCO.")
+
         return LoanRead.model_validate(loan)
 
     # ------------------------------------------------------------------
     # Status transitions
     # ------------------------------------------------------------------
 
-    def approve_loan(self, loan_id: uuid.UUID) -> LoanRead:
+    def approve_loan(self, loan_id: uuid.UUID, current_user: User) -> LoanRead:
         """PENDING → APPROVED"""
-        return self._transition(loan_id, LoanStatusEnum.approved)
+        return self._transition(loan_id, LoanStatusEnum.approved, current_user)
 
-    def reject_loan(self, loan_id: uuid.UUID) -> LoanRead:
+    def reject_loan(self, loan_id: uuid.UUID, current_user: User) -> LoanRead:
         """PENDING | APPROVED → REJECTED"""
-        return self._transition(loan_id, LoanStatusEnum.rejected)
+        return self._transition(loan_id, LoanStatusEnum.rejected, current_user)
 
-    def disburse_loan(self, loan_id: uuid.UUID) -> LoanRead:
+    def disburse_loan(self, loan_id: uuid.UUID, current_user: User) -> LoanRead:
         """APPROVED → DISBURSED"""
-        return self._transition(loan_id, LoanStatusEnum.disbursed)
+        return self._transition(loan_id, LoanStatusEnum.disbursed, current_user)
 
-    def activate_loan(self, loan_id: uuid.UUID) -> LoanRead:
+    def activate_loan(self, loan_id: uuid.UUID, current_user: User) -> LoanRead:
         """DISBURSED → ACTIVE"""
-        return self._transition(loan_id, LoanStatusEnum.active)
+        return self._transition(loan_id, LoanStatusEnum.active, current_user)
 
-    def repay_loan(self, loan_id: uuid.UUID) -> LoanRead:
+    def repay_loan(self, loan_id: uuid.UUID, current_user: User) -> LoanRead:
         """ACTIVE → REPAID"""
-        return self._transition(loan_id, LoanStatusEnum.repaid)
+        return self._transition(loan_id, LoanStatusEnum.repaid, current_user)
 
-    def default_loan(self, loan_id: uuid.UUID) -> LoanRead:
+    def default_loan(self, loan_id: uuid.UUID, current_user: User) -> LoanRead:
         """ACTIVE → DEFAULTED"""
-        return self._transition(loan_id, LoanStatusEnum.defaulted)
+        return self._transition(loan_id, LoanStatusEnum.defaulted, current_user)
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _transition(self, loan_id: uuid.UUID, target: LoanStatusEnum) -> LoanRead:
+    def _transition(self, loan_id: uuid.UUID, target: LoanStatusEnum, current_user: User) -> LoanRead:
         loan = self.repo.get_loan(loan_id)
         if loan is None:
             raise NotFoundError(f"Loan '{loan_id}' not found.")
+
+        if current_user.role != RoleEnum.admin and current_user.sacco_id != loan.farmer.sacco_id:
+            raise ForbiddenError("You can only modify loans in your own SACCO.")
 
         allowed = _TRANSITIONS.get(loan.status, set())
         if target not in allowed:

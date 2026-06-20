@@ -19,6 +19,8 @@ class FarmerCreate(BaseModel):
     last_name: str = Field(min_length=1, max_length=100)
     phone: str = Field(min_length=7, max_length=20)
     national_id: str | None = Field(default=None, max_length=20)
+    login_email: str = Field(min_length=1, max_length=255)
+    login_password: str = Field(min_length=1, max_length=255)
 
     @field_validator("first_name", "last_name", mode="before")
     @classmethod
@@ -63,6 +65,28 @@ class FarmerCreate(BaseModel):
             raise ValueError("national_id must contain only digits")
         if set(value) == {"0"}:
             raise ValueError("national_id cannot be all zeros")
+        return value
+
+    @field_validator("login_email", mode="before")
+    @classmethod
+    def login_email_normalised(cls, v: str) -> str:
+        if not isinstance(v, str):
+            return v
+
+        value = v.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+    @field_validator("login_password", mode="before")
+    @classmethod
+    def login_password_not_blank(cls, v: str) -> str:
+        if not isinstance(v, str):
+            return v
+
+        value = v.strip()
+        if not value:
+            raise ValueError("must not be blank")
         return value
 
 

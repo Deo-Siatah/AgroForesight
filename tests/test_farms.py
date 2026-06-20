@@ -4,6 +4,7 @@ Integration tests for POST /api/v1/farms and GET /api/v1/farms/{id}.
 """
 import uuid
 from tests.conftest import rnd_phone, rnd_nid
+from tests.conftest import rnd_phone, rnd_nid, sacco_admin_auth_headers
 
 FARMERS = "/api/v1/farmers"
 BASE = "/api/v1/farms"
@@ -16,7 +17,9 @@ def _farmer(client, sacco_id):
         "last_name": "Farmer",
         "phone": rnd_phone(),
         "national_id": rnd_nid(),
-    }).json()
+        "login_email": f"farmer-{uuid.uuid4().hex}@agroforesight.local",
+        "login_password": "farmer123",
+    }, headers=sacco_admin_auth_headers()).json()
 
 
 def _payload(farmer_id, **overrides):

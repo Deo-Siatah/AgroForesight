@@ -23,10 +23,11 @@ import uuid
 from sqlalchemy.orm import Session
 
 from db.models.season import SeasonStatusEnum
+from db.models.user import RoleEnum, User
 from repository.loan_repository import LoanRepository
 from repository.season_repository import SeasonRepository
 from schemas.risk import RiskScore, RiskCategory
-from services.exceptions import NotFoundError
+from services.exceptions import ForbiddenError, NotFoundError
 
 
 class RiskService:
@@ -39,6 +40,7 @@ class RiskService:
         self,
         loan_id: uuid.UUID,
         *,
+        current_user: User,
         season_id: uuid.UUID | None = None,
         # Phase 2 inputs — wired as keyword-only so callers can pass them
         # later without breaking the existing API contract.
@@ -56,6 +58,9 @@ class RiskService:
         if loan is None:
             raise NotFoundError(f"Loan '{loan_id}' not found.")
 
+        if current_user.role != RoleEnum.admin and current_user.sacco_id != loan.farmer.sacco_id:
+            raise ForbiddenError("You can only calculate risk for loans in your own SACCO.")
+
         score = 0
 
         # -- Season risk --------------------------------------------------
@@ -63,6 +68,8 @@ class RiskService:
             season = self.season_repo.get_season(season_id)
             if season is None:
                 raise NotFoundError(f"Season '{season_id}' not found.")
+            if current_user.role != RoleEnum.admin and current_user.sacco_id != season.farm.farmer.sacco_id:
+                raise ForbiddenError("You can only use seasons from your own SACCO.")
             if season.status == SeasonStatusEnum.failed:
                 score += 40
 

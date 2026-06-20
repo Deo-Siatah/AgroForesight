@@ -19,10 +19,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.models.season import Season, SeasonStatusEnum
+from db.models.user import RoleEnum, User
 from repository.season_repository import SeasonRepository
 from repository.farm_repository import FarmRepository
 from schemas.season import SeasonCreate, SeasonRead
-from services.exceptions import BusinessRuleError, InvalidTransitionError, NotFoundError
+from services.exceptions import BusinessRuleError, ForbiddenError, InvalidTransitionError, NotFoundError
 
 
 # Allowed (from → {valid targets}) — extend here as business rules evolve.
@@ -44,14 +45,18 @@ class SeasonService:
     # Create
     # ------------------------------------------------------------------
 
-    def create_season(self, data: SeasonCreate) -> SeasonRead:
+    def create_season(self, data: SeasonCreate, current_user: User) -> SeasonRead:
         """
         Persist a new season for a farm.
         Date ordering is already validated by SeasonCreate.
         Season always starts as PLANNED.
         """
-        if self.farm_repo.get_farm(data.farm_id) is None:
+        farm = self.farm_repo.get_farm(data.farm_id)
+        if farm is None:
             raise NotFoundError(f"Farm '{data.farm_id}' not found.")
+
+        if current_user.role != RoleEnum.admin and current_user.sacco_id != farm.farmer.sacco_id:
+            raise ForbiddenError("You can only create seasons for your own SACCO.")
 
         season = Season(
             id=uuid.uuid4(),
@@ -70,36 +75,43 @@ class SeasonService:
         self.db.refresh(season)
         return SeasonRead.model_validate(season)
 
-    def get_season(self, season_id: uuid.UUID) -> SeasonRead:
+    def get_season(self, season_id: uuid.UUID, current_user: User) -> SeasonRead:
         season = self.repo.get_season(season_id)
         if season is None:
             raise NotFoundError(f"Season '{season_id}' not found.")
+
+        if current_user.role != RoleEnum.admin and current_user.sacco_id != season.farm.farmer.sacco_id:
+            raise ForbiddenError("You can only view seasons in your own SACCO.")
+
         return SeasonRead.model_validate(season)
 
     # ------------------------------------------------------------------
     # Status transitions
     # ------------------------------------------------------------------
 
-    def activate_season(self, season_id: uuid.UUID) -> SeasonRead:
+    def activate_season(self, season_id: uuid.UUID, current_user: User) -> SeasonRead:
         """PLANNED → ACTIVE"""
-        return self._transition(season_id, SeasonStatusEnum.active)
+        return self._transition(season_id, SeasonStatusEnum.active, current_user)
 
-    def harvest_season(self, season_id: uuid.UUID) -> SeasonRead:
+    def harvest_season(self, season_id: uuid.UUID, current_user: User) -> SeasonRead:
         """ACTIVE → HARVESTED"""
-        return self._transition(season_id, SeasonStatusEnum.harvested)
+        return self._transition(season_id, SeasonStatusEnum.harvested, current_user)
 
-    def fail_season(self, season_id: uuid.UUID) -> SeasonRead:
+    def fail_season(self, season_id: uuid.UUID, current_user: User) -> SeasonRead:
         """ACTIVE → FAILED"""
-        return self._transition(season_id, SeasonStatusEnum.failed)
+        return self._transition(season_id, SeasonStatusEnum.failed, current_user)
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _transition(self, season_id: uuid.UUID, target: SeasonStatusEnum) -> SeasonRead:
+    def _transition(self, season_id: uuid.UUID, target: SeasonStatusEnum, current_user: User) -> SeasonRead:
         season = self.repo.get_season(season_id)
         if season is None:
             raise NotFoundError(f"Season '{season_id}' not found.")
+
+        if current_user.role != RoleEnum.admin and current_user.sacco_id != season.farm.farmer.sacco_id:
+            raise ForbiddenError("You can only modify seasons in your own SACCO.")
 
         allowed = _TRANSITIONS.get(season.status, set())
         if target not in allowed:

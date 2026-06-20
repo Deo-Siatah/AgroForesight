@@ -4,6 +4,7 @@ Integration tests for GET /api/v1/loans/{id}/risk and POST .../risk/recalculate.
 """
 import uuid
 from tests.conftest import rnd_phone, rnd_nid
+from tests.conftest import rnd_phone, rnd_nid, sacco_admin_auth_headers
 
 FARMERS = "/api/v1/farmers"
 FARMS   = "/api/v1/farms"
@@ -16,7 +17,9 @@ def _setup(client, sacco_id):
     farmer_id = client.post(FARMERS, json={
         "sacco_id": str(sacco_id), "first_name": "R", "last_name": "S",
         "phone": rnd_phone(), "national_id": rnd_nid(),
-    }).json()["id"]
+        "login_email": f"farmer-{uuid.uuid4().hex}@agroforesight.local",
+        "login_password": "farmer123",
+    }, headers=sacco_admin_auth_headers()).json()["id"]
 
     farm_id = client.post(FARMS, json={
         "farmer_id": farmer_id, "name": "Risk Farm",

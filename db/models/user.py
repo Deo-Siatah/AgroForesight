@@ -1,7 +1,7 @@
 import uuid
 from enum import Enum
 
-from sqlalchemy import String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.types import Enum as SaEnum
 
 from sqlalchemy.dialects.postgresql import UUID
@@ -37,6 +37,16 @@ class User(Base, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
+    )
+
+    sacco_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("saccos.id"),
+        nullable=True,
+    )
+
+    farmer_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("farmers.id"),
+        nullable=True,
     )
 
     role: Mapped[RoleEnum] = mapped_column(

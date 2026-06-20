@@ -4,6 +4,7 @@ Integration tests for Season CRUD and status transitions.
 """
 import uuid
 from tests.conftest import rnd_phone, rnd_nid
+from tests.conftest import rnd_phone, rnd_nid, sacco_admin_auth_headers
 
 FARMERS = "/api/v1/farmers"
 FARMS   = "/api/v1/farms"
@@ -15,7 +16,9 @@ def _setup(client, sacco_id):
     farmer = client.post(FARMERS, json={
         "sacco_id": str(sacco_id), "first_name": "A", "last_name": "B",
         "phone": rnd_phone(), "national_id": rnd_nid(),
-    }).json()
+        "login_email": f"farmer-{uuid.uuid4().hex}@agroforesight.local",
+        "login_password": "farmer123",
+    }, headers=sacco_admin_auth_headers()).json()
     farm = client.post(FARMS, json={
         "farmer_id": farmer["id"], "name": "Season Farm",
         "county": "Nakuru", "acreage": "1.0",

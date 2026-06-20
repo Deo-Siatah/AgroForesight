@@ -6,6 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
 
+    AUTH_SECRET: str = "dev-auth-secret"
+    AUTH_TOKEN_TTL_MINUTES: int = 60 * 24
+
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
 

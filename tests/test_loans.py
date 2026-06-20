@@ -4,6 +4,7 @@ Integration tests for Loan CRUD and full status transition chain.
 """
 import uuid
 from tests.conftest import rnd_phone, rnd_nid
+from tests.conftest import rnd_phone, rnd_nid, sacco_admin_auth_headers
 
 FARMERS = "/api/v1/farmers"
 BASE    = "/api/v1/loans"
@@ -13,7 +14,9 @@ def _farmer_id(client, sacco_id):
     return client.post(FARMERS, json={
         "sacco_id": str(sacco_id), "first_name": "L", "last_name": "T",
         "phone": rnd_phone(), "national_id": rnd_nid(),
-    }).json()["id"]
+        "login_email": f"farmer-{uuid.uuid4().hex}@agroforesight.local",
+        "login_password": "farmer123",
+    }, headers=sacco_admin_auth_headers()).json()["id"]
 
 
 def _new_loan(client, sacco_id, amount="50000.00"):

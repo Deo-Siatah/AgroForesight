@@ -12,6 +12,9 @@ from api.v1 import router as v1_router
 from services.exceptions import (
     NotFoundError,
     DuplicateError,
+    UnauthorizedError,
+    ForbiddenError,
+    ConflictError,
     InvalidTransitionError,
     BusinessRuleError,
 )
@@ -48,6 +51,21 @@ async def invalid_transition_handler(request: Request, exc: InvalidTransitionErr
 @app.exception_handler(BusinessRuleError)
 async def business_rule_handler(request: Request, exc: BusinessRuleError) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(UnauthorizedError)
+async def unauthorized_handler(request: Request, exc: UnauthorizedError) -> JSONResponse:
+    return JSONResponse(status_code=401, content={"detail": str(exc)})
+
+
+@app.exception_handler(ForbiddenError)
+async def forbidden_handler(request: Request, exc: ForbiddenError) -> JSONResponse:
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
+@app.exception_handler(ConflictError)
+async def conflict_handler(request: Request, exc: ConflictError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 @app.exception_handler(IntegrityError)

@@ -13,23 +13,33 @@ from sqlalchemy.orm import Session
 
 from db.models.farmer import Farmer
 from db.models.sacco import Sacco
+from db.models.user import RoleEnum, User
 from repository.farmer_repository import FarmerRepository
+from repository.user_repository import UserRepository
 from schemas.farmer import FarmerCreate, FarmerRead, FarmerProfile
 from schemas.farm import FarmRead
 from schemas.loan import LoanRead
-from services.exceptions import DuplicateError, NotFoundError
+from services.exceptions import ConflictError, DuplicateError, ForbiddenError, NotFoundError
+from services.security import hash_password
 
 
 class FarmerService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = FarmerRepository(db)
+        self.user_repo = UserRepository(db)
 
-    def register_farmer(self, data: FarmerCreate) -> FarmerRead:
+    def register_farmer(self, data: FarmerCreate, current_user: User) -> FarmerRead:
         """
         Validate uniqueness then persist.
         Raises DuplicateError if phone or national_id already exists.
         """
+        if current_user.role == RoleEnum.sacco_admin and current_user.sacco_id != data.sacco_id:
+            raise ForbiddenError("You can only register farmers for your own SACCO.")
+
+        if current_user.role not in (RoleEnum.admin, RoleEnum.sacco_admin):
+            raise ForbiddenError("Only admins and sacco admins can register farmers.")
+
         if self.db.get(Sacco, data.sacco_id) is None:
             raise NotFoundError(f"Sacco '{data.sacco_id}' not found.")
 
@@ -50,6 +60,17 @@ class FarmerService:
             national_id=data.national_id,
         )
         self.repo.create_farmer(farmer)
+        if self.user_repo.get_user_by_email(data.login_email) is not None:
+            raise ConflictError(f"User '{data.login_email}' already exists.")
+
+        self.user_repo.create_user(User(
+            id=uuid.uuid4(),
+            email=data.login_email,
+            password_hash=hash_password(data.login_password),
+            sacco_id=data.sacco_id,
+            farmer_id=farmer.id,
+            role=RoleEnum.farmer,
+        ))
         try:
             self.db.commit()
         except IntegrityError as exc:
@@ -60,7 +81,7 @@ class FarmerService:
         self.db.refresh(farmer)
         return FarmerRead.model_validate(farmer)
 
-    def get_farmer_profile(self, farmer_id: uuid.UUID) -> FarmerProfile:
+    def get_farmer_profile(self, farmer_id: uuid.UUID, current_user: User) -> FarmerProfile:
         """
         Return Farmer + all Farms + all Loans in a single composite object.
         Designed to feed the farmer dashboard, WhatsApp agent, and USSD layer.
@@ -68,6 +89,15 @@ class FarmerService:
         farmer = self.repo.get_farmer_by_id(farmer_id)
         if farmer is None:
             raise NotFoundError(f"Farmer '{farmer_id}' not found.")
+
+        if current_user.role == RoleEnum.sacco_admin and current_user.sacco_id != farmer.sacco_id:
+            raise ForbiddenError("You can only view farmers in your own SACCO.")
+
+        if current_user.role == RoleEnum.farmer and current_user.farmer_id != farmer_id:
+            raise ForbiddenError("You can only view your own farmer profile.")
+
+        if current_user.role not in (RoleEnum.admin, RoleEnum.sacco_admin, RoleEnum.farmer):
+            raise ForbiddenError("You do not have permission to view farmer profiles.")
 
         farms = self.repo.get_farmer_farms(farmer_id)
         loans = self.repo.get_farmer_loans(farmer_id)
