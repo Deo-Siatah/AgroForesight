@@ -47,3 +47,9 @@ class Farm(Base, TimestampMixin):
         "Season",
         back_populates="farm",
     )
+    
+    weather_snapshots = relationship(
+    "WeatherSnapshot",
+    back_populates="farm",
+    cascade="all, delete-orphan"
+)

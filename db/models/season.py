@@ -1,24 +1,27 @@
 import uuid
+from enum import Enum
 
 from sqlalchemy import Date
 from sqlalchemy import ForeignKey
 from sqlalchemy import String
+from sqlalchemy.types import Enum as SaEnum
 
 from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
-from enum import Enum
 
 from db.base import Base
 from db.base import TimestampMixin
+
 
 class SeasonStatusEnum(str, Enum):
     planned = "planned"
     active = "active"
     harvested = "harvested"
     failed = "failed"
+
 
 class Season(Base, TimestampMixin):
     __tablename__ = "seasons"
@@ -39,7 +42,7 @@ class Season(Base, TimestampMixin):
     expected_harvest_date = mapped_column(Date)
 
     status = mapped_column(
-        Enum(SeasonStatusEnum, native_enum=True),
+        SaEnum(SeasonStatusEnum, native_enum=True),
         nullable=False,
     )
 
@@ -52,3 +55,7 @@ class Season(Base, TimestampMixin):
         "Recommendation",
         back_populates="season",
     )
+    risk_assessments = relationship(
+    "RiskAssessment",
+    back_populates="season",
+)

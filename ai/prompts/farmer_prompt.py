@@ -19,7 +19,10 @@ class FarmerPrompt:
 
     def build_prompt(
         self,
-        recommendation_data: dict,
+        recommendation: dict,
+        weather:dict,
+        crop_type: str | None = None,
+        county: str | None = None,
     ) -> str:
 
         role = self.config["role"]
@@ -44,9 +47,19 @@ TONE:
 VERBOSITY:
 {verbosity}
 
+CROP TYPE:
+{crop_type or "N/A"}
+
+COUNTY:
+{county or "N/A"}
+
+WEATHER DATA:
+
+{weather or "N/A"}
+
 RULE-BASED RECOMMENDATION:
 
-{recommendation_data}
+{recommendation}
 
 Generate a response following the configured rules.
 

@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import ForeignKey
 from sqlalchemy import String
+from sqlalchemy import UniqueConstraint
 
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -15,6 +16,10 @@ from db.base import TimestampMixin
 
 class Farmer(Base, TimestampMixin):
     __tablename__ = "farmers"
+    __table_args__ = (
+        UniqueConstraint("phone", name="uq_farmers_phone"),
+        UniqueConstraint("national_id", name="uq_farmers_national_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

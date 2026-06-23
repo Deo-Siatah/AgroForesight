@@ -6,7 +6,7 @@ from ai.llm.recommendation_generator import (
     RecommendationGenerator,
 )
 
-from repositories.recommendation_repository import (
+from repository.recommendation_repository import (
     RecommendationRepository,
 )
 
@@ -14,7 +14,7 @@ from ai.weather.weather_repository import (
     WeatherRepository,
 )
 
-from models.recommendation import (
+from db.models.recommendation import (
     Recommendation_type_enum,
 )
 

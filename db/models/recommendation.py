@@ -1,29 +1,29 @@
 import uuid
+from enum import Enum
 
 from sqlalchemy import ForeignKey
 from sqlalchemy import String
 from sqlalchemy import Text
+from sqlalchemy.types import Enum as SaEnum
 
 from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
-from enum import Enum
 
 from db.base import Base
 from db.base import TimestampMixin
 
 
-class Recommendation_type_enum(str, Enum):
+class RecommendationTypeEnum(str, Enum):
     planting = "planting"
     fertilizer = "fertilizer"
     weeding = "weeding"
-    pest="pest"
+    pest = "pest"
     harvest = "harvest"
-    weather="weather"
+    weather = "weather"
     finance = "finance"
-    
 
 
 class Recommendation(Base, TimestampMixin):
@@ -39,7 +39,7 @@ class Recommendation(Base, TimestampMixin):
     )
 
     recommendation_type = mapped_column(
-        Enum(Recommendation_type_enum, native_enum=True),
+        SaEnum(RecommendationTypeEnum, native_enum=True),
         nullable=False,
     )
 

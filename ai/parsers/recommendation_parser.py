@@ -6,6 +6,6 @@ class RecommendationResponse(BaseModel):
 
     message: str = Field(
         min_length=20,
-        max_length=1000,
+        max_length=3000,
         description="Farmer facing recommendation"
     )
