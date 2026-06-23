@@ -1,192 +1,104 @@
 """
 api/v1/loans.py
-
 Routes:
-    POST   /loans
-    GET    /loans/{loan_id}
+  POST   /loans
+  GET    /loans/{id}
+  PATCH  /loans/{id}/approve
+  PATCH  /loans/{id}/reject
+  PATCH  /loans/{id}/disburse
+  PATCH  /loans/{id}/activate
+  PATCH  /loans/{id}/repay
+  PATCH  /loans/{id}/default
+  GET    /loans/{id}/risk
+  POST   /loans/{id}/risk/recalculate
 
-    PATCH  /loans/{loan_id}/approve
-    PATCH  /loans/{loan_id}/reject
-    PATCH  /loans/{loan_id}/disburse
-    PATCH  /loans/{loan_id}/activate
-    PATCH  /loans/{loan_id}/repay
-    PATCH  /loans/{loan_id}/default
-
-    GET    /loans/{loan_id}/risk
-    POST   /loans/{loan_id}/risk/recalculate
-    GET    /loans/{loan_id}/risk/history
-
-Routes stay thin.
-All business logic lives in services.
+Routes stay thin — call a service, return its result.
 """
-
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter
-from fastapi import Depends
-
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from api.deps import get_db
-from api.deps import require_role
-
-from db.models.user import User
-from db.models.user import RoleEnum
-
-from schemas.loan import LoanCreate
-from schemas.loan import LoanRead
-
-from schemas.risk_assesment import RiskAssessmentRead
-
-
+from api.deps import get_db, require_role
+from db.models.user import RoleEnum, User
+from schemas.loan import LoanCreate, LoanRead
+from schemas.risk import RiskScore
 from services.loan_service import LoanService
+from services.risk_service import RiskService
 
-from services.risk_assesment_service import (
-    RiskAssessmentService,
-)
+_guard = require_role(RoleEnum.admin, RoleEnum.sacco_admin)
 
-_guard = require_role(
-    RoleEnum.admin,
-    RoleEnum.sacco_admin,
-)
-
-router = APIRouter(
-    prefix="/loans",
-    tags=["Loans"],
-)
+router = APIRouter(prefix="/loans", tags=["Loans"])
 
 
-# ==========================================================
-# Create
-# ==========================================================
-
-@router.post(
-    "",
-    response_model=LoanRead,
-    status_code=201,
-)
+@router.post("", response_model=LoanRead, status_code=201)
 def create_loan(
     data: LoanCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> LoanRead:
-
-    return LoanService(db).create_loan(
-        data,
-        current_user,
-    )
+    return LoanService(db).create_loan(data, current_user)
 
 
-# ==========================================================
-# Read
-# ==========================================================
-
-@router.get(
-    "/{loan_id}",
-    response_model=LoanRead,
-)
+@router.get("/{loan_id}", response_model=LoanRead)
 def get_loan(
     loan_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> LoanRead:
-
-    return LoanService(db).get_loan(
-        loan_id,
-        current_user,
-    )
+    return LoanService(db).get_loan(loan_id, current_user)
 
 
-# ==========================================================
-# Status Transitions
-# ==========================================================
+# --- Status transitions ---------------------------------------------------
 
-@router.patch(
-    "/{loan_id}/approve",
-    response_model=LoanRead,
-)
+@router.patch("/{loan_id}/approve", response_model=LoanRead)
 def approve_loan(
     loan_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> LoanRead:
-
-    return LoanService(db).approve_loan(
-        loan_id,
-        current_user,
-    )
+    return LoanService(db).approve_loan(loan_id, current_user)
 
 
-@router.patch(
-    "/{loan_id}/reject",
-    response_model=LoanRead,
-)
+@router.patch("/{loan_id}/reject", response_model=LoanRead)
 def reject_loan(
     loan_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> LoanRead:
-
-    return LoanService(db).reject_loan(
-        loan_id,
-        current_user,
-    )
+    return LoanService(db).reject_loan(loan_id, current_user)
 
 
-@router.patch(
-    "/{loan_id}/disburse",
-    response_model=LoanRead,
-)
+@router.patch("/{loan_id}/disburse", response_model=LoanRead)
 def disburse_loan(
     loan_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> LoanRead:
-
-    return LoanService(db).disburse_loan(
-        loan_id,
-        current_user,
-    )
+    return LoanService(db).disburse_loan(loan_id, current_user)
 
 
-@router.patch(
-    "/{loan_id}/activate",
-    response_model=LoanRead,
-)
+@router.patch("/{loan_id}/activate", response_model=LoanRead)
 def activate_loan(
     loan_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> LoanRead:
-
-    return LoanService(db).activate_loan(
-        loan_id,
-        current_user,
-    )
+    return LoanService(db).activate_loan(loan_id, current_user)
 
 
-@router.patch(
-    "/{loan_id}/repay",
-    response_model=LoanRead,
-)
+@router.patch("/{loan_id}/repay", response_model=LoanRead)
 def repay_loan(
     loan_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> LoanRead:
-
-    return LoanService(db).repay_loan(
-        loan_id,
-        current_user,
-    )
+    return LoanService(db).repay_loan(loan_id, current_user)
 
 
-@router.patch(
-    "/{loan_id}/default",
-    response_model=LoanRead,
-)
+@router.patch("/{loan_id}/default", response_model=LoanRead)
 def default_loan(
     loan_id: uuid.UUID,
     db: Session = Depends(get_db),
