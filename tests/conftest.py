@@ -39,7 +39,7 @@ def rnd_nid() -> str:
 
 
 def rnd_email() -> str:
-    return f"user-{uuid.uuid4().hex[:10]}@agroforesight.test"
+    return f"user-{uuid.uuid4().hex[:10]}@hifadhi.test"
 
 
 def login(email: str, password: str) -> str:

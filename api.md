@@ -1,4 +1,4 @@
-# AgroForesight API Routes
+# Hifadhi API Routes
 
 Base URL: `http://127.0.0.1:8000`
 
@@ -94,7 +94,7 @@ All SACCO endpoints require `admin` role.
   "last_name": "Wanjiku",
   "phone": "+254712345678",
   "national_id": "12345678",
-  "login_email": "jane@agroforesight.local",
+  "login_email": "jane@hifadhi.local",
   "login_password": "securepassword"
 }
 ```

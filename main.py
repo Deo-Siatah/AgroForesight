@@ -1,5 +1,5 @@
 """
-main.py — AgroForesight API entry point.
+main.py — Hifadhi API entry point.
 Architecture: Repository → Service → API (routes stay thin).
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from services.exceptions import (
 )
 
 app = FastAPI(
-    title="AgroForesight",
+    title="Hifadhi",
     description=(
         "AI-powered agricultural risk management platform. "
         "Phase 1: CRUD foundation across SACCO → Farmer → Farm → Season → Loan."
