@@ -13,13 +13,10 @@ class Settings(BaseSettings):
     AUTH_TOKEN_TTL_MINUTES: int = 60 * 24
 
     ENVIRONMENT: str = "development"
-    DEBUG: bool = Fals
+    DEBUG: bool = False
     GOOGLE_API_KEY: str
     LLM_MODEL: str = "gemini-2.5-flash"
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

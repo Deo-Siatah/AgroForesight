@@ -1,13 +1,13 @@
 """
 api/v1/farmers.py
-Routes: POST /farmers, GET /farmers/{id}
+Routes: GET /farmers, POST /farmers, GET /farmers/{id}
 Routes stay thin — call a service, return its result.
 """
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_user, get_db, require_role
@@ -16,6 +16,19 @@ from schemas.farmer import FarmerCreate, FarmerRead, FarmerProfile
 from services.farmer_service import FarmerService
 
 router = APIRouter(prefix="/farmers", tags=["Farmers"])
+
+
+@router.get("", response_model=list[FarmerRead])
+def list_farmers(
+    sacco_id: uuid.UUID | None = Query(default=None),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(RoleEnum.admin, RoleEnum.sacco_admin)),
+) -> list[FarmerRead]:
+    return FarmerService(db).list_farmers(
+        current_user, sacco_id=sacco_id, offset=offset, limit=limit
+    )
 
 
 @router.post("", response_model=FarmerRead, status_code=201)

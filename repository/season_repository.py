@@ -11,6 +11,8 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from db.models.season import Season, SeasonStatusEnum
+from db.models.farm import Farm
+from db.models.farmer import Farmer
 
 
 class SeasonRepository:
@@ -55,4 +57,27 @@ class SeasonRepository:
         q = self.db.query(Season).filter(Season.farm_id == farm_id)
         if status is not None:
             q = q.filter(Season.status == status)
+        return q.offset(offset).limit(limit).all()
+
+    def list_seasons(
+        self,
+        *,
+        sacco_id: uuid.UUID | None = None,
+        status: SeasonStatusEnum | None = None,
+        crop_type: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> List[Season]:
+        """Return a global paginated list of seasons with optional filters."""
+        q = (
+            self.db.query(Season)
+            .join(Farm, Season.farm_id == Farm.id)
+            .join(Farmer, Farm.farmer_id == Farmer.id)
+        )
+        if sacco_id is not None:
+            q = q.filter(Farmer.sacco_id == sacco_id)
+        if status is not None:
+            q = q.filter(Season.status == status)
+        if crop_type is not None:
+            q = q.filter(Season.crop_type.ilike(f"%{crop_type}%"))
         return q.offset(offset).limit(limit).all()

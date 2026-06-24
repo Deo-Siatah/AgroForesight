@@ -1,6 +1,7 @@
 """
 api/v1/loans.py
 Routes:
+  GET    /loans
   POST   /loans
   GET    /loans/{id}
   PATCH  /loans/{id}/approve
@@ -23,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_db, require_role
 from db.models.user import RoleEnum, User
+from db.models.loan import LoanStatusEnum
 from schemas.loan import LoanCreate, LoanRead
 from schemas.risk import RiskScore
 from services.loan_service import LoanService
@@ -31,6 +33,20 @@ from services.risk_service import RiskService
 _guard = require_role(RoleEnum.admin, RoleEnum.sacco_admin)
 
 router = APIRouter(prefix="/loans", tags=["Loans"])
+
+
+@router.get("", response_model=list[LoanRead])
+def list_loans(
+    farmer_id: uuid.UUID | None = Query(default=None),
+    status: LoanStatusEnum | None = Query(default=None),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_guard),
+) -> list[LoanRead]:
+    return LoanService(db).list_loans(
+        current_user, farmer_id=farmer_id, status=status, offset=offset, limit=limit
+    )
 
 
 @router.post("", response_model=LoanRead, status_code=201)

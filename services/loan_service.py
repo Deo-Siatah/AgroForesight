@@ -89,6 +89,45 @@ class LoanService:
 
         return LoanRead.model_validate(loan)
 
+    def list_loans(
+        self,
+        current_user: User,
+        *,
+        farmer_id: uuid.UUID | None = None,
+        status: LoanStatusEnum | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> list[LoanRead]:
+        """
+        Return a paginated list of loans.
+        - admin: can filter by any farmer_id or see all loans.
+        - sacco_admin: always scoped to their own SACCO's farmers.
+        """
+        if farmer_id is not None:
+            farmer = self.farmer_repo.get_farmer_by_id(farmer_id)
+            if farmer is None:
+                raise NotFoundError(f"Farmer '{farmer_id}' not found.")
+            if current_user.role != RoleEnum.admin and current_user.sacco_id != farmer.sacco_id:
+                raise ForbiddenError("You can only view loans for your own SACCO's farmers.")
+            loans = self.repo.get_farmer_loans(
+                farmer_id, status=status, offset=offset, limit=limit
+            )
+        elif current_user.role == RoleEnum.sacco_admin:
+            # Scope to all farmers in this SACCO
+            from db.models.loan import Loan
+            from db.models.farmer import Farmer as FarmerModel
+            q = (
+                self.repo.db.query(Loan)
+                .join(FarmerModel, Loan.farmer_id == FarmerModel.id)
+                .filter(FarmerModel.sacco_id == current_user.sacco_id)
+            )
+            if status is not None:
+                q = q.filter(Loan.status == status)
+            loans = q.offset(offset).limit(limit).all()
+        else:
+            loans = self.repo.list_loans(status=status, offset=offset, limit=limit)
+        return [LoanRead.model_validate(l) for l in loans]
+
     # ------------------------------------------------------------------
     # Status transitions
     # ------------------------------------------------------------------

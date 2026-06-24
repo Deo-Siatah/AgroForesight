@@ -4,7 +4,7 @@ Aggregates all v1 routers into a single include-able router.
 """
 from fastapi import APIRouter
 
-from api.v1 import auth, saccos, farmers, farms, seasons, loans
+from api.v1 import auth, saccos, farmers, farms, seasons, loans, recommendations
 
 router = APIRouter()
 
@@ -14,3 +14,4 @@ router.include_router(farmers.router)
 router.include_router(farms.router)
 router.include_router(seasons.router)
 router.include_router(loans.router)
+router.include_router(recommendations.router)

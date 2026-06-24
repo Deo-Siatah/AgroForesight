@@ -81,6 +81,29 @@ class FarmerService:
         self.db.refresh(farmer)
         return FarmerRead.model_validate(farmer)
 
+    def list_farmers(
+        self,
+        current_user: User,
+        *,
+        sacco_id: uuid.UUID | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> list[FarmerRead]:
+        """
+        Return a paginated list of farmers.
+        - admin: may filter by any sacco_id or see all.
+        - sacco_admin: always scoped to their own SACCO regardless of the sacco_id param.
+        """
+        if current_user.role == RoleEnum.sacco_admin:
+            effective_sacco = current_user.sacco_id
+        else:
+            effective_sacco = sacco_id
+
+        farmers = self.repo.list_farmers(
+            sacco_id=effective_sacco, offset=offset, limit=limit
+        )
+        return [FarmerRead.model_validate(f) for f in farmers]
+
     def get_farmer_profile(self, farmer_id: uuid.UUID, current_user: User) -> FarmerProfile:
         """
         Return Farmer + all Farms + all Loans in a single composite object.
