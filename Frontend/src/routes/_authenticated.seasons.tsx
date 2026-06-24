@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { Plus, Sprout } from "lucide-react";
 import { useSeasons } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ const PAGE_SIZE = 20;
 const STATUSES: SeasonStatus[] = ["planned", "active", "harvested", "failed"];
 
 function SeasonsPage() {
+  const matchRoute = useMatchRoute();
+  const isChild = matchRoute({ to: "/seasons/new" }) || matchRoute({ to: "/seasons/$seasonId" });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<SeasonStatus | "all">("all");
   const [page, setPage] = useState(0);
@@ -42,6 +44,8 @@ function SeasonsPage() {
     search: debounced,
     status: status === "all" ? undefined : status,
   });
+
+  if (isChild) return <Outlet />;
 
   return (
     <div className="space-y-6">

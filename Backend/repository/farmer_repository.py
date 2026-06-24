@@ -57,13 +57,20 @@ class FarmerRepository:
         self,
         *,
         sacco_id: uuid.UUID | None = None,
+        search: str | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> List[Farmer]:
-        """Return a paginated slice of farmers, optionally scoped to a SACCO."""
         q = self.db.query(Farmer)
         if sacco_id is not None:
             q = q.filter(Farmer.sacco_id == sacco_id)
+        if search:
+            q = q.filter(
+                Farmer.first_name.ilike(f"%{search}%")
+                | Farmer.last_name.ilike(f"%{search}%")
+                | Farmer.phone.ilike(f"%{search}%")
+                | Farmer.national_id.ilike(f"%{search}%")
+            )
         return q.offset(offset).limit(limit).all()
 
     def get_farmer_farms(self, farmer_id: uuid.UUID) -> List[Farm]:

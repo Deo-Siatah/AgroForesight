@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
@@ -102,9 +103,8 @@ function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 autoComplete="current-password"
                 required
                 value={password}
@@ -137,14 +137,6 @@ function LoginPage() {
               )}
             </Button>
           </form>
-
-          <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Dev credentials</p>
-            <ul className="mt-1 space-y-0.5">
-              <li>admin26@gmail.com / admin26 (admin)</li>
-              <li>saccoadmin26@gmail.com / saccoadmin26 (sacco_admin)</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>

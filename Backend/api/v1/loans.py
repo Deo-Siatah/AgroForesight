@@ -39,13 +39,14 @@ router = APIRouter(prefix="/loans", tags=["Loans"])
 def list_loans(
     farmer_id: uuid.UUID | None = Query(default=None),
     status: LoanStatusEnum | None = Query(default=None),
+    search: str | None = Query(default=None),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> list[LoanRead]:
     return LoanService(db).list_loans(
-        current_user, farmer_id=farmer_id, status=status, offset=offset, limit=limit
+        current_user, farmer_id=farmer_id, status=status, search=search, offset=offset, limit=limit
     )
 
 

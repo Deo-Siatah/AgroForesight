@@ -32,13 +32,14 @@ router = APIRouter(prefix="/seasons", tags=["Seasons"])
 def list_seasons(
     status: SeasonStatusEnum | None = Query(default=None),
     crop_type: str | None = Query(default=None),
+    search: str | None = Query(default=None),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(_guard),
 ) -> list[SeasonRead]:
     return SeasonService(db).list_seasons(
-        current_user, status=status, crop_type=crop_type, offset=offset, limit=limit
+        current_user, status=status, crop_type=crop_type, search=search, offset=offset, limit=limit
     )
 
 

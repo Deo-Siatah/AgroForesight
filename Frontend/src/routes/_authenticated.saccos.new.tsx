@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ErrorBanner, apiErrorMessage } from "@/components/error-banner";
 
 export const Route = createFileRoute("/_authenticated/saccos/new")({
@@ -33,6 +34,8 @@ function CreateSaccoPage() {
   const create = useCreateSacco();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pageError, setPageError] = useState<string | null>(null);
+  const [createdEmail, setCreatedEmail] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -58,11 +61,41 @@ function CreateSaccoPage() {
         admin_email: parsed.data.admin_email,
         admin_password: parsed.data.admin_password,
       });
+      setCreatedEmail(parsed.data.admin_email);
+      setCreatedId(sacco.id);
       toast.success("SACCO created");
-      navigate({ to: "/saccos/$saccoId", params: { saccoId: sacco.id } });
     } catch (err) {
       setPageError(apiErrorMessage(err, "Failed to create SACCO."));
     }
+  }
+
+  if (createdEmail && createdId) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>SACCO created ✓</CardTitle>
+            <CardDescription>Share these login credentials with the SACCO admin.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md border bg-muted p-4 space-y-2">
+              <p className="text-sm">
+                <span className="text-muted-foreground">Login email: </span>
+                <span className="font-medium select-all">{createdEmail}</span>
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The password is what was set during registration. Save it now — it won't be shown again.
+            </p>
+            <div className="flex justify-end">
+              <Button onClick={() => navigate({ to: "/saccos/$saccoId", params: { saccoId: createdId! } })}>
+                Go to SACCO
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -134,7 +167,11 @@ function Field({
       <Label htmlFor={name}>
         {label} {required ? <span className="text-destructive">*</span> : null}
       </Label>
-      <Input id={name} name={name} type={type} aria-invalid={!!error} />
+      {type === "password" ? (
+        <PasswordInput id={name} name={name} aria-invalid={!!error} />
+      ) : (
+        <Input id={name} name={name} type={type} aria-invalid={!!error} />
+      )}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );

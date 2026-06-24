@@ -53,7 +53,7 @@ export function RiskLevelBadge({ level }: { level: RiskLevel }) {
 }
 
 export function PriorityBadge({ priority }: { priority: RecommendationPriority }) {
-  const c = priorityHex[priority];
+  const c = priorityHex[priority] ?? priorityHex.low;
   return (
     <span
       className={cn(base)}

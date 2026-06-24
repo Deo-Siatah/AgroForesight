@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, ArrowRight, History, UserCircle } from "lucide-react";
+import { Building2, ArrowRight, History, MapPin, Sprout, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   PortfolioRiskOverview,
@@ -10,6 +10,8 @@ import {
   RecentRiskAssessments,
 } from "@/components/dashboard-widgets";
 import { GlobalGenerateRecommendation } from "@/components/global-generate-recommendation";
+import { useFarmerProfile } from "@/lib/queries";
+import { LoanStatusBadge, SeasonStatusBadge } from "@/components/status-badge";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   ssr: false,
@@ -64,14 +66,7 @@ function DashboardPage() {
         ) : null}
 
         {user.role === "farmer" && user.farmer_id ? (
-          <ActionCard
-            icon={<UserCircle className="h-5 w-5" />}
-            title="Your profile"
-            description="See your farms, seasons, and loans."
-            to="/farmers/$farmerId"
-            params={{ farmerId: user.farmer_id }}
-            cta="View profile"
-          />
+          <FarmerDashboard farmerId={user.farmer_id} />
         ) : null}
 
         {(user.role === "admin" || user.role === "sacco_admin") && (
@@ -95,22 +90,6 @@ function DashboardPage() {
           </div>
         </div>
       )}
-
-
-
-      <Card>
-        <CardHeader>
-          <CardTitle>API base</CardTitle>
-          <CardDescription>
-            Override at build time with <code className="rounded bg-muted px-1.5 py-0.5 text-xs">VITE_API_BASE</code>.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <code className="text-xs text-muted-foreground">
-            {import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000/api/v1"}
-          </code>
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -148,5 +127,107 @@ function ActionCard({
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+function FarmerDashboard({ farmerId }: { farmerId: string }) {
+  const { data, isLoading } = useFarmerProfile(farmerId);
+
+  if (isLoading) {
+    return <div className="col-span-3 h-32 animate-pulse rounded-lg bg-muted" />;
+  }
+
+  const farms = data?.farms ?? [];
+  const loans = data?.loans ?? [];
+  const activeLoans = loans.filter((l) => l.status === "active" || l.status === "disbursed");
+  const pendingLoans = loans.filter((l) => l.status === "pending");
+
+  return (
+    <div className="col-span-full space-y-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="rounded-md bg-accent p-2 text-accent-foreground">
+              <MapPin className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-semibold text-foreground">{farms.length}</p>
+              <p className="text-sm text-muted-foreground">Farm{farms.length !== 1 ? "s" : ""}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="rounded-md bg-accent p-2 text-accent-foreground">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-semibold text-foreground">{activeLoans.length}</p>
+              <p className="text-sm text-muted-foreground">Active loan{activeLoans.length !== 1 ? "s" : ""}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="rounded-md bg-accent p-2 text-accent-foreground">
+              <Sprout className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-semibold text-foreground">{pendingLoans.length}</p>
+              <p className="text-sm text-muted-foreground">Pending loan{pendingLoans.length !== 1 ? "s" : ""}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {farms.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Your farms</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {farms.map((farm) => (
+              <div key={farm.id} className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{farm.name}</p>
+                  <p className="text-xs text-muted-foreground">{farm.county} · {farm.acreage} acres</p>
+                </div>
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/farms/$farmId" params={{ farmId: farm.id }}>
+                    View <ArrowRight className="ml-1 h-3 w-3" />
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {loans.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Your loans</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {loans.map((loan) => (
+              <div key={loan.id} className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">KES {Number(loan.amount).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(loan.created_at).toLocaleDateString()}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <LoanStatusBadge status={loan.status} />
+                  <Button asChild variant="ghost" size="sm">
+                    <Link to="/loans/$loanId" params={{ loanId: loan.id }}>
+                      View <ArrowRight className="ml-1 h-3 w-3" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

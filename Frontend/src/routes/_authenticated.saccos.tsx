@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { Building2, Plus } from "lucide-react";
 import { useSaccos } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/saccos")({
 const PAGE_SIZE = 20;
 
 function SaccosPage() {
+  const matchRoute = useMatchRoute();
+  const isChild = matchRoute({ to: "/saccos/new" }) || matchRoute({ to: "/saccos/$saccoId" });
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const debounced = useDebounced(search);
@@ -30,6 +32,8 @@ function SaccosPage() {
     limit: PAGE_SIZE,
     search: debounced,
   });
+
+  if (isChild) return <Outlet />;
 
   return (
     <div className="space-y-6">

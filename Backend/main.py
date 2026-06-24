@@ -5,6 +5,7 @@ Architecture: Repository → Service → API (routes stay thin).
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
@@ -26,6 +27,18 @@ app = FastAPI(
         "Phase 1: CRUD foundation across SACCO → Farmer → Farm → Season → Loan."
     ),
     version="0.1.0",
+)
+
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------

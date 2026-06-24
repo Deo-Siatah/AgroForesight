@@ -65,10 +65,10 @@ class SeasonRepository:
         sacco_id: uuid.UUID | None = None,
         status: SeasonStatusEnum | None = None,
         crop_type: str | None = None,
+        search: str | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> List[Season]:
-        """Return a global paginated list of seasons with optional filters."""
         q = (
             self.db.query(Season)
             .join(Farm, Season.farm_id == Farm.id)
@@ -80,4 +80,6 @@ class SeasonRepository:
             q = q.filter(Season.status == status)
         if crop_type is not None:
             q = q.filter(Season.crop_type.ilike(f"%{crop_type}%"))
+        if search:
+            q = q.filter(Season.crop_type.ilike(f"%{search}%"))
         return q.offset(offset).limit(limit).all()

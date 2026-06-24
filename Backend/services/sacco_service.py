@@ -58,5 +58,5 @@ class SaccoService:
             raise NotFoundError(f"Sacco '{sacco_id}' not found.")
         return SaccoRead.model_validate(sacco)
 
-    def list_saccos(self, *, offset: int = 0, limit: int = 20) -> list[SaccoRead]:
-        return [SaccoRead.model_validate(s) for s in self.repo.list_saccos(offset=offset, limit=limit)]
+    def list_saccos(self, *, search: str | None = None, offset: int = 0, limit: int = 20) -> list[SaccoRead]:
+        return [SaccoRead.model_validate(s) for s in self.repo.list_saccos(search=search, offset=offset, limit=limit)]

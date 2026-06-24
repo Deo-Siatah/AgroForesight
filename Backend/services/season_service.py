@@ -91,17 +91,13 @@ class SeasonService:
         *,
         status: SeasonStatusEnum | None = None,
         crop_type: str | None = None,
+        search: str | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> list[SeasonRead]:
-        """Return a paginated list of seasons scoped to the caller's SACCO (or all for admin)."""
         sacco_id = None if current_user.role == RoleEnum.admin else current_user.sacco_id
         seasons = self.repo.list_seasons(
-            sacco_id=sacco_id,
-            status=status,
-            crop_type=crop_type,
-            offset=offset,
-            limit=limit,
+            sacco_id=sacco_id, status=status, crop_type=crop_type, search=search, offset=offset, limit=limit,
         )
         return [SeasonRead.model_validate(s) for s in seasons]
 

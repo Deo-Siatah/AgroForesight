@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { Plus, Wallet } from "lucide-react";
 import { useLoans } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,8 @@ const STATUSES: LoanStatus[] = [
 ];
 
 function LoansPage() {
+  const matchRoute = useMatchRoute();
+  const isChild = matchRoute({ to: "/loans/new" }) || matchRoute({ to: "/loans/$loanId" });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<LoanStatus | "all">("all");
   const [page, setPage] = useState(0);
@@ -50,6 +52,8 @@ function LoansPage() {
     search: debounced,
     status: status === "all" ? undefined : status,
   });
+
+  if (isChild) return <Outlet />;
 
   return (
     <div className="space-y-6">

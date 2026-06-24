@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ErrorBanner, apiErrorMessage } from "@/components/error-banner";
 
 export const Route = createFileRoute("/_authenticated/farmers/new")({
@@ -50,7 +51,7 @@ function RegisterFarmerPage() {
     setPageError(null);
     const fd = new FormData(e.currentTarget);
     const parsed = schema.safeParse({
-      sacco_id: fd.get("sacco_id"),
+      sacco_id: canChooseSacco ? fd.get("sacco_id") : defaultSaccoId,
       first_name: fd.get("first_name"),
       last_name: fd.get("last_name"),
       phone: fd.get("phone"),
@@ -94,14 +95,15 @@ function RegisterFarmerPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
-            <Field
-              label="SACCO ID"
-              name="sacco_id"
-              required
-              defaultValue={defaultSaccoId}
-              readOnly={!canChooseSacco}
-              error={errors.sacco_id}
-            />
+            {canChooseSacco && (
+              <Field
+                label="SACCO ID"
+                name="sacco_id"
+                required
+                defaultValue={defaultSaccoId}
+                error={errors.sacco_id}
+              />
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label="First name" name="first_name" required error={errors.first_name} />
               <Field label="Last name" name="last_name" required error={errors.last_name} />
@@ -157,15 +159,25 @@ function Field({
       <Label htmlFor={name}>
         {label} {required ? <span className="text-destructive">*</span> : null}
       </Label>
-      <Input
-        id={name}
-        name={name}
-        type={type}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        readOnly={readOnly}
-        aria-invalid={!!error}
-      />
+      {type === "password" ? (
+        <PasswordInput
+          id={name}
+          name={name}
+          placeholder={placeholder}
+          defaultValue={defaultValue}
+          aria-invalid={!!error}
+        />
+      ) : (
+        <Input
+          id={name}
+          name={name}
+          type={type}
+          placeholder={placeholder}
+          defaultValue={defaultValue}
+          readOnly={readOnly}
+          aria-invalid={!!error}
+        />
+      )}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );

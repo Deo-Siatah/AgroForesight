@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import List
 
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 
 from db.models.loan import Loan, LoanStatusEnum
@@ -52,13 +53,20 @@ class LoanRepository:
         self,
         *,
         status: LoanStatusEnum | None = None,
+        search: str | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> List[Loan]:
-        """Return a paginated slice of all loans, optionally filtered by status."""
+        from db.models.farmer import Farmer
         q = self.db.query(Loan)
         if status is not None:
             q = q.filter(Loan.status == status)
+        if search:
+            q = q.join(Farmer, Loan.farmer_id == Farmer.id).filter(
+                cast(Loan.id, String).ilike(f"%{search}%")
+                | Farmer.first_name.ilike(f"%{search}%")
+                | Farmer.last_name.ilike(f"%{search}%")
+            )
         return q.offset(offset).limit(limit).all()
 
     def get_farmer_loans(

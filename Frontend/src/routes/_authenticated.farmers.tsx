@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { Plus, Users } from "lucide-react";
 import { useFarmers } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/farmers")({
 const PAGE_SIZE = 20;
 
 function FarmersPage() {
+  const matchRoute = useMatchRoute();
+  const isChild = matchRoute({ to: "/farmers/new" }) || matchRoute({ to: "/farmers/$farmerId" });
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const debounced = useDebounced(search);
@@ -30,6 +32,8 @@ function FarmersPage() {
     limit: PAGE_SIZE,
     search: debounced,
   });
+
+  if (isChild) return <Outlet />;
 
   return (
     <div className="space-y-6">

@@ -24,5 +24,8 @@ class SaccoRepository:
     def get_sacco(self, sacco_id: uuid.UUID) -> Sacco | None:
         return self.db.get(Sacco, sacco_id)
 
-    def list_saccos(self, *, offset: int = 0, limit: int = 20) -> List[Sacco]:
-        return self.db.query(Sacco).offset(offset).limit(limit).all()
+    def list_saccos(self, *, search: str | None = None, offset: int = 0, limit: int = 20) -> List[Sacco]:
+        q = self.db.query(Sacco)
+        if search:
+            q = q.filter(Sacco.name.ilike(f"%{search}%") | Sacco.county.ilike(f"%{search}%"))
+        return q.offset(offset).limit(limit).all()

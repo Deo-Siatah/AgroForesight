@@ -95,14 +95,10 @@ class LoanService:
         *,
         farmer_id: uuid.UUID | None = None,
         status: LoanStatusEnum | None = None,
+        search: str | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> list[LoanRead]:
-        """
-        Return a paginated list of loans.
-        - admin: can filter by any farmer_id or see all loans.
-        - sacco_admin: always scoped to their own SACCO's farmers.
-        """
         if farmer_id is not None:
             farmer = self.farmer_repo.get_farmer_by_id(farmer_id)
             if farmer is None:
@@ -113,9 +109,9 @@ class LoanService:
                 farmer_id, status=status, offset=offset, limit=limit
             )
         elif current_user.role == RoleEnum.sacco_admin:
-            # Scope to all farmers in this SACCO
             from db.models.loan import Loan
             from db.models.farmer import Farmer as FarmerModel
+            from sqlalchemy import String, cast
             q = (
                 self.repo.db.query(Loan)
                 .join(FarmerModel, Loan.farmer_id == FarmerModel.id)
@@ -123,9 +119,15 @@ class LoanService:
             )
             if status is not None:
                 q = q.filter(Loan.status == status)
+            if search:
+                q = q.filter(
+                    cast(Loan.id, String).ilike(f"%{search}%")
+                    | FarmerModel.first_name.ilike(f"%{search}%")
+                    | FarmerModel.last_name.ilike(f"%{search}%")
+                )
             loans = q.offset(offset).limit(limit).all()
         else:
-            loans = self.repo.list_loans(status=status, offset=offset, limit=limit)
+            loans = self.repo.list_loans(status=status, search=search, offset=offset, limit=limit)
         return [LoanRead.model_validate(l) for l in loans]
 
     # ------------------------------------------------------------------

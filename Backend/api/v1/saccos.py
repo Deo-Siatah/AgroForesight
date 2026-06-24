@@ -31,12 +31,13 @@ def create_sacco(
 
 @router.get("", response_model=list[SaccoRead])
 def list_saccos(
+    search: str | None = Query(default=None),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     _current_user: User = Depends(_guard),
 ) -> list[SaccoRead]:
-    return SaccoService(db).list_saccos(offset=offset, limit=limit)
+    return SaccoService(db).list_saccos(search=search, offset=offset, limit=limit)
 
 
 @router.get("/{sacco_id}", response_model=SaccoRead)
